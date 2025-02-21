@@ -364,29 +364,68 @@ function isInFishingZone(source, type)
     local playerPed = GetPlayerPed(source)
     local playerPos = GetEntityCoords(playerPed)
     if type == 'fish' then
-        for _, zone in ipairs(Config.FishingZones) do
-            if zone.enabled then
-                local distanceSquared = (playerPos.x - zone.loc.x)^2 + (playerPos.y - zone.loc.y)^2 + (playerPos.z - zone.loc.z)^2
-                local radiusSquared = zone.radius * zone.radius
+        if Config.FishingZone == 'poly' then
 
-                if distanceSquared <= radiusSquared then
-                    return true 
+            local function isInsideZone(points, thickness)
+                for _, point in ipairs(points) do
+                    local distanceSquared = (playerPos.x - point.x)^2 + (playerPos.y - point.y)^2 + (playerPos.z - point.z)^2
+                    local radiusSquared = thickness * thickness
+    
+                    if distanceSquared <= radiusSquared then
+                        return true
+                    end
+                end
+                return false
+            end
+            for _, zone in ipairs(Config.FishingPolyZones) do
+                if zone.enabled and isInsideZone(zone.points, zone.thickness) then
+                    return true
                 end
             end
+        elseif Config.FishingZone == 'sphere' then
+            for _, zone in ipairs(Config.FishingSphereZones) do
+                if zone.enabled then
+                    local distanceSquared = (playerPos.x - zone.loc.x)^2 + (playerPos.y - zone.loc.y)^2 + (playerPos.z - zone.loc.z)^2
+                    local radiusSquared = zone.radius * zone.radius
+    
+                    if distanceSquared <= radiusSquared then
+                        return true 
+                    end
+                end
+            end
+            return false
         end
-        return false
     else
-        for _, zone in ipairs(Config.illegalfishingzones) do
-            if zone.enabled then
-                local distanceSquared = (playerPos.x - zone.loc.x)^2 + (playerPos.y - zone.loc.y)^2 + (playerPos.z - zone.loc.z)^2
-                local radiusSquared = zone.radius * zone.radius
-
-                if distanceSquared <= radiusSquared then
-                    return true 
+        if Config.IllegalFishingZone == 'poly' then
+            local function isInsideZone(points, thickness)
+                for _, point in ipairs(points) do
+                    local distanceSquared = (playerPos.x - point.x)^2 + (playerPos.y - point.y)^2 + (playerPos.z - point.z)^2
+                    local radiusSquared = thickness * thickness
+    
+                    if distanceSquared <= radiusSquared then
+                        return true
+                    end
+                end
+                return false
+            end
+            for _, zone in ipairs(Config.IllegalfishingPolyzones) do
+                if zone.enabled and isInsideZone(zone.points, zone.thickness) then
+                    return true
                 end
             end
+        elseif Config.IllegalFishingZone == 'sphere' then
+            for _, zone in ipairs(Config.IllegalfishingSpherezones) do
+                if zone.enabled then
+                    local distanceSquared = (playerPos.x - zone.loc.x)^2 + (playerPos.y - zone.loc.y)^2 + (playerPos.z - zone.loc.z)^2
+                    local radiusSquared = zone.radius * zone.radius
+    
+                    if distanceSquared <= radiusSquared then
+                        return true 
+                    end
+                end
+            end
+            return false
         end
-        return false
     end
 end
 

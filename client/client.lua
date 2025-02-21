@@ -6,6 +6,7 @@ local inillfish = false
 local tooweak = false
 local pole = nil
 local anchor = nil
+local blips = {}
 
 AddEventHandler("QBCore:Client:OnPlayerLoaded", function()
 	TriggerServerEvent('md-fishing:server:checksql')
@@ -43,20 +44,82 @@ CreateThread(function()
 	AddBoxZoneSingle('breadown', Config.MaterialBreakdown, {label = "break Down",icon = "fas fa-eye",action = function() breakDown('breakDown') lib.showContext('breakDown') end})
 end)
 
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+        local coords = GetEntityCoords(PlayerPedId())
+        for k, v in pairs(Config.BlipsZone) do 
+            if v.enabled then
+                local bliplocation = vector3(v.loc.x, v.loc.y, v.loc.z)
+                local distance = #(coords - bliplocation)
+
+                if distance < 750 then
+                    if not blips[k] then
+                        local blip = AddBlipForCoord(v.loc.x, v.loc.y, v.loc.z) 
+                        SetBlipSprite(blip, v.sprite) 
+                        SetBlipDisplay(blip, 6) 
+                        SetBlipScale(blip, v.scale) 
+                        SetBlipColour(blip, v.color)
+                        SetBlipAsShortRange(blip, true) 
+                        BeginTextCommandSetBlipName("STRING") 
+                        AddTextComponentString(v.label) 
+                        EndTextCommandSetBlipName(blip)
+                        blips[k] = blip
+                    end
+                else
+                    if blips[k] then
+                        RemoveBlip(blips[k])
+                        blips[k] = nil
+                    end
+                end
+            end
+        end
+    end
+end)
+
+
 CreateThread(function() --- zone creation necessary to get the globals to allow/disallow fishing
-	for k, v in pairs (Config.FishingZones) do
-		if v.enabled then 
-			sphere = lib.zones.sphere({ coords = v.loc, radius = v.radius, debug = v.debug,
-				onEnter = function() Notify("Pull Your Fishing Pole Out")	infish = true end,
-				onExit = function()	infish = false	end,
-			})
+	if Config.FishingZone == 'poly' then
+		for k, v in pairs (Config.FishingPolyZones) do
+			if v.enabled then 
+				fishingZone = lib.zones.poly({
+					points = v.points,
+					thickness = v.thickness,
+					debug = v.debug,
+					onEnter = function() 
+						Notify("Pull Your Fishing Pole Out")	
+						infish = true 
+					end,
+					onExit = function()	
+						infish = false	
+					end,
+				})
+			end
+		end
+	elseif Config.FishingZone == 'sphere' then
+		for k, v in pairs (Config.FishingSphereZones) do
+			if v.enabled then 
+				sphere = lib.zones.sphere({ coords = v.loc, radius = v.radius, debug = v.debug,
+					onEnter = function() 
+						Notify("Pull Your Fishing Pole Out")	
+						infish = true 
+					end,
+					onExit = function()	
+						infish = false	
+					end,
+				})
+			end
 		end
 	end
-	for k, v in pairs (Config.illegalfishingzones) do 
-		if v.enabled then
-			illegalsphere = lib.zones.sphere({ coords = v.loc, radius = v.radius, debug = v.debug,
-				onEnter = function()
-					local fish, ill, mag = lib.callback.await('md-fishing:server:GetLevels', false, 'fishing')
+	if Config.IllegalFishingZone == 'poly' then
+		for k, v in pairs (Config.IllegalfishingPolyzones) do 
+			if v.enabled then
+				illegalZone = lib.zones.poly({
+					points = v.points,
+					thickness = v.thickness,
+					debug = v.debug,
+					onEnter = function() 
+						local fish, ill, mag = lib.callback.await('md-fishing:server:GetLevels', false, 'fishing')
 						if fish >= Config.StarIllLvl then
 							inillfish = true
 							tooweak = false
@@ -66,9 +129,35 @@ CreateThread(function() --- zone creation necessary to get the globals to allow/
 							tooweak = true
 							Notify('You Must Be Level ' .. Config.StarIllLvl .. ' In Fishing To Fish Here', 'error')
 						end
-				end,
-				onExit = function()	inillfish = false end
-			})
+					end,
+					onExit = function()	
+						inillfish = false 
+					end
+
+				})
+			end
+		end
+	elseif Config.IllegalFishingZone == 'sphere' then
+		for k, v in pairs (Config.IllegalfishingSpherezones) do
+			if v.enabled then
+				illegalsphere = lib.zones.sphere({ coords = v.loc, radius = v.radius, debug = v.debug,
+					onEnter = function()
+						local fish, ill, mag = lib.callback.await('md-fishing:server:GetLevels', false, 'fishing')
+						if fish >= Config.StarIllLvl then
+							inillfish = true
+							tooweak = false
+							Notify('Maybe A Really Strong Pole Will Do Well Here', 'success')
+						else
+							inillfish = false
+							tooweak = true
+							Notify('You Must Be Level ' .. Config.StarIllLvl .. ' In Fishing To Fish Here', 'error')
+						end
+					end,
+					onExit = function()	
+						inillfish = false 
+					end
+				})
+			end
 		end
 	end
 end)
